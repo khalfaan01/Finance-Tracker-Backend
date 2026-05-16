@@ -45,6 +45,21 @@ export class BudgetService {
     try {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+      );
+
+      // Get user's accounts first
+      const userAccounts = await this.prisma.account.findMany({
+        where: { userId },
+        select: { id: true },
+      });
+      const accountIds = userAccounts.map((a) => a.id);
 
       const budgets = await this.prisma.budget.findMany({
         where: { userId, isActive: true },
@@ -53,13 +68,16 @@ export class BudgetService {
       const results = [];
 
       for (const budget of budgets) {
-        // Calculate actual spent from transactions
+        // Calculate actual spent from transactions using account IDs
         const transactions = await this.prisma.transaction.aggregate({
           where: {
-            account: { userId },
+            accountId: { in: accountIds },
             type: "expense",
             category: budget.category,
-            date: { gte: startOfMonth },
+            date: {
+              gte: startOfMonth,
+              lte: endOfMonth,
+            },
           },
           _sum: {
             amount: true,
@@ -70,7 +88,7 @@ export class BudgetService {
 
         // Update if different
         if (Math.abs(budget.spent - actualSpent) > 0.01) {
-          const updatedBudget = await this.prisma.budget.update({
+          await this.prisma.budget.update({
             where: { id: budget.id },
             data: { spent: actualSpent },
           });
@@ -446,7 +464,7 @@ export class BudgetService {
     const variance =
       recentAmounts.reduce(
         (sum, amount) => sum + Math.pow(amount - recentAvg, 2),
-        0
+        0,
       ) / recentCount;
     const stdDev = Math.sqrt(variance);
     const cv = recentAvg > 0 ? stdDev / recentAvg : 0;
@@ -604,7 +622,7 @@ export class BudgetService {
           // Apply rollover before resetting
           const rollover = await this.calculateRollover(
             budget.id,
-            budget.userId
+            budget.userId,
           );
 
           await this.prisma.budget.update({
@@ -872,19 +890,19 @@ export class BudgetService {
 
       const existingBudgets = await this.getUserBudgets(userId);
       const existingCategories = new Set(
-        existingBudgets.map((b) => b.category)
+        existingBudgets.map((b) => b.category),
       );
       const recommendations = this.generateSmartBudgets(transactions);
 
       // Filter out categories that already have budgets
       const filteredRecommendations = recommendations.filter(
-        (rec) => !existingCategories.has(rec.category)
+        (rec) => !existingCategories.has(rec.category),
       );
 
       // Calculate potential savings
       const potentialSavings = this.calculatePotentialSavings(
         transactions,
-        filteredRecommendations
+        filteredRecommendations,
       );
 
       const result = {
@@ -925,12 +943,12 @@ export class BudgetService {
     recommendations.forEach((rec) => {
       // Calculate how much over the recommended limit the user currently spends
       const categoryTransactions = transactions.filter(
-        (t) => t.type === "expense" && t.category === rec.category
+        (t) => t.type === "expense" && t.category === rec.category,
       );
 
       const categoryTotal = categoryTransactions.reduce(
         (sum, t) => sum + Math.abs(t.amount),
-        0
+        0,
       );
 
       // Calculate average monthly spending (3 months of data)
@@ -961,7 +979,7 @@ export class BudgetService {
 
     // Analyze uncategorized spending
     const uncategorized = transactions.filter(
-      (t) => t.type === "expense" && (!t.category || t.category === "Other")
+      (t) => t.type === "expense" && (!t.category || t.category === "Other"),
     );
 
     if (uncategorized.length > 5) {
@@ -1015,11 +1033,11 @@ export class BudgetService {
       transactions
         .filter((t) => t.type === "expense")
         .map((t) => t.category)
-        .filter(Boolean)
+        .filter(Boolean),
     );
 
     const uncoveredCategories = Array.from(spendingCategories).filter(
-      (cat) => !budgetCategories.has(cat)
+      (cat) => !budgetCategories.has(cat),
     );
 
     if (uncoveredCategories.length > 0) {
@@ -1062,7 +1080,7 @@ export class BudgetService {
 
       Object.entries(categorySpending).forEach(([category, data]) => {
         const existingBudget = existingBudgets.find(
-          (b) => b.category === category
+          (b) => b.category === category,
         );
 
         if (data.count >= 3) {
@@ -1118,7 +1136,7 @@ export class BudgetService {
         totalCategories: Object.keys(predictions).length,
         totalPredictedSpending: Object.values(predictions).reduce(
           (sum, p) => sum + p.predictedSpending,
-          0
+          0,
         ),
         predictions,
         dataQuality: this.assessPredictionQuality(categorySpending),

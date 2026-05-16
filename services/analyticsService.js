@@ -65,7 +65,7 @@ export class AnalyticsService {
               error: result.reason.message,
             });
           }
-        }
+        },
       );
 
       // Initialize results with safe defaults
@@ -101,7 +101,7 @@ export class AnalyticsService {
             this.goalService.optimizeGoalAllocation(
               goalsData,
               1000,
-              "balanced"
+              "balanced",
             ),
         },
         {
@@ -114,7 +114,7 @@ export class AnalyticsService {
         },
         {
           name: "cash flow analysis",
-          fn: () => this.analyzeCashFlow(transactionsData, "daily"),
+          fn: () => this.analyzeCashFlow(transactionsData, timeframe),
         },
         {
           name: "income breakdown",
@@ -260,7 +260,7 @@ export class AnalyticsService {
           cashFlowAnalysis,
           spendingForecast,
           subscriptionAnalysis,
-          goalAnalytics
+          goalAnalytics,
         ),
 
         // Metadata
@@ -332,7 +332,7 @@ export class AnalyticsService {
         periods: [],
         trends: {},
         insights: [],
-        granularity: "daily",
+        granularity: "monthly",
       },
       incomeBreakdown: {
         streams: {},
@@ -759,7 +759,7 @@ export class AnalyticsService {
         insights: this.generateIncomeInsights(
           streams,
           totalIncome,
-          diversityScore
+          diversityScore,
         ),
       };
     } catch (error) {
@@ -830,7 +830,7 @@ export class AnalyticsService {
 
     // Irregular income analysis
     const irregularStreams = Object.entries(streams).filter(
-      ([_, stream]) => stream.frequency === "irregular"
+      ([_, stream]) => stream.frequency === "irregular",
     ).length;
 
     if (irregularStreams > 0) {
@@ -879,19 +879,19 @@ export class AnalyticsService {
       const dailyProjections = this.generateDailyProjections(
         dailyAverages,
         weeklyPatterns,
-        days
+        days,
       );
       const confidence = this.assessForecastConfidence(
         expenseTransactions.length,
-        days
+        days,
       );
       const riskFactors = this.identifyRiskFactors(
         expenseTransactions,
-        dailyProjections
+        dailyProjections,
       );
       const recommendations = this.generateForecastRecommendations(
         dailyProjections,
-        riskFactors
+        riskFactors,
       );
 
       logger.debug("Spending forecast generated", {
@@ -1092,7 +1092,7 @@ export class AnalyticsService {
     expenseTransactions.forEach((transaction) => {
       const date = new Date(transaction.date);
       const monthKey = `${date.getFullYear()}-${String(
-        date.getMonth() + 1
+        date.getMonth() + 1,
       ).padStart(2, "0")}`;
 
       if (!monthlyTotals[monthKey]) {
@@ -1205,7 +1205,7 @@ export class AnalyticsService {
 
     const projectionTotal = projections.reduce(
       (sum, p) => sum + p.projectedAmount,
-      0
+      0,
     );
     const averageProjection = projectionTotal / projections.length;
 
@@ -1237,14 +1237,14 @@ export class AnalyticsService {
 
     const totalProjected = projections.reduce(
       (sum, p) => sum + p.projectedAmount,
-      0
+      0,
     );
 
     if (totalProjected > 0) {
       recommendations.push({
         type: "budget_planning",
         message: `Plan for approximately $${totalProjected.toFixed(
-          2
+          2,
         )} in expenses over the next ${projections.length} days`,
         priority: "high",
       });
@@ -1255,7 +1255,7 @@ export class AnalyticsService {
         p.projectedAmount >
         (projections.reduce((sum, proj) => sum + proj.projectedAmount, 0) /
           projections.length) *
-          1.5
+          1.5,
     );
 
     if (highExpenseDays.length > 0) {
@@ -1402,7 +1402,7 @@ export class AnalyticsService {
 
     const totalSpending = expenseTransactions.reduce(
       (sum, t) => sum + Math.abs(t.amount),
-      0
+      0,
     );
     const impulsePercentage = (impulseSpending / totalSpending) * 100;
 
@@ -1410,7 +1410,7 @@ export class AnalyticsService {
       insights.push({
         type: "impulse_spending",
         message: `High percentage (${impulsePercentage.toFixed(
-          1
+          1,
         )}%) of spending is on small items`,
         severity: "medium",
         suggestion: "Implement a waiting period for small purchases",
@@ -1516,7 +1516,7 @@ export class AnalyticsService {
     cashFlowAnalysis,
     spendingForecast,
     subscriptionAnalysis,
-    goalAnalytics
+    goalAnalytics,
   ) {
     const summary = {
       // Patterns analysis
@@ -1550,7 +1550,7 @@ export class AnalyticsService {
       projectedSpending:
         spendingForecast.dailyProjections?.reduce(
           (sum, p) => sum + p.projectedAmount,
-          0
+          0,
         ) || 0,
 
       // Subscription analysis
@@ -1565,7 +1565,7 @@ export class AnalyticsService {
         cashFlowAnalysis,
         goalAnalytics,
         spendingForecast,
-        subscriptionAnalysis
+        subscriptionAnalysis,
       ),
 
       // Metadata
@@ -1638,7 +1638,7 @@ export class AnalyticsService {
     cashFlowAnalysis,
     goalAnalytics,
     spendingForecast,
-    subscriptionAnalysis
+    subscriptionAnalysis,
   ) {
     let score = 50; // Base score
 
@@ -1682,7 +1682,7 @@ export class AnalyticsService {
     // Subscription optimization contribution (0-10 points)
     const subscriptionScore = Math.min(
       10,
-      subscriptionAnalysis.recommendations?.length || 0 * 2
+      subscriptionAnalysis.recommendations?.length || 0 * 2,
     );
     score += subscriptionScore;
 

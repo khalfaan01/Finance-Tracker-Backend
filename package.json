@@ -8,6 +8,9 @@
     "start": "node server.js",
     "seed": "ts-node prisma/seed.ts"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "dependencies": {
     "@faker-js/faker": "^10.1.0",
     "@prisma/client": "^6.19.0",
