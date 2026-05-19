@@ -51,25 +51,65 @@ const transactionValidation = [
  */
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    const transactions = await transactionService.getUserTransactions(
-      req.user.userId
-    );
+    const page = parseInt(req.query.page) || 1;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50); // Max 50 per page
+    const skip = (page - 1) * limit;
 
-    logger.info("Fetched user transactions", {
-      context: "transaction",
-      userId: req.user.userId,
-      transactionCount: transactions.length,
-      totalIncome: transactions.filter((t) => t.type === "income").length,
-      totalExpenses: transactions.filter((t) => t.type === "expense").length,
+    const [transactions, totalCount] = await Promise.all([
+      transactionService.getUserTransactionsPaginated(
+        req.user.userId,
+        skip,
+        limit,
+      ),
+      transactionService.getTransactionCount(req.user.userId),
+    ]);
+
+    res.json({
+      transactions,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasMore: page * limit < totalCount,
+      },
     });
-
-    res.json(transactions);
   } catch (error) {
     logger.error("Failed to fetch transactions", {
       context: "transaction",
       userId: req.user.userId,
       error: error.message,
       stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+    });
+    res.status(500).json({ error: "Failed to fetch transactions" });
+  }
+});
+
+/**
+ * GET /transactions/all - Get all transactions without pagination for dashboard
+ * @route GET /transactions/all
+ * @returns {Array} Complete list of user transactions
+ * @description Retrieves all transactions for dashboard analytics
+ */
+router.get("/all", authenticateToken, async (req, res) => {
+  try {
+    const transactions = await transactionService.getUserTransactions(
+      req.user.userId,
+      true,
+    );
+
+    logger.info("Fetched all transactions for dashboard", {
+      context: "transaction",
+      userId: req.user.userId,
+      transactionCount: transactions.length,
+    });
+
+    res.json(transactions);
+  } catch (error) {
+    logger.error("Failed to fetch all transactions", {
+      context: "transaction",
+      userId: req.user.userId,
+      error: error.message,
     });
     res.status(500).json({ error: "Failed to fetch transactions" });
   }
@@ -88,7 +128,7 @@ router.get("/summary", authenticateToken, async (req, res) => {
 
     const summary = await transactionService.getTransactionSummary(
       req.user.userId,
-      timeframe
+      timeframe,
     );
 
     logger.info("Generated transaction summary", {
@@ -120,7 +160,7 @@ router.get("/summary", authenticateToken, async (req, res) => {
 router.get("/flagged", authenticateToken, async (req, res) => {
   try {
     const flaggedTransactions = await transactionService.getFlaggedTransactions(
-      req.user.userId
+      req.user.userId,
     );
 
     logger.info("Fetched flagged transactions", {
@@ -194,7 +234,7 @@ router.post("/", authenticateToken, transactionValidation, async (req, res) => {
     const result = await transactionService.createTransaction(
       data,
       req.user.userId,
-      req.ip
+      req.ip,
     );
 
     if (result.warning) {
@@ -307,7 +347,7 @@ router.put(
       const transaction = await transactionService.updateTransaction(
         id,
         data,
-        req.user.userId
+        req.user.userId,
       );
 
       logger.info("Transaction updated successfully", {
@@ -336,7 +376,7 @@ router.put(
         res.status(500).json({ error: "Failed to update transaction" });
       }
     }
-  }
+  },
 );
 
 /**
@@ -391,7 +431,7 @@ router.patch("/:id/review", authenticateToken, async (req, res) => {
   try {
     const transaction = await transactionService.markAsReviewed(
       parseInt(id),
-      req.user.userId
+      req.user.userId,
     );
 
     logger.info("Transaction marked as reviewed", {
@@ -468,7 +508,7 @@ router.get("/category/:category", authenticateToken, async (req, res) => {
         acc.count++;
         return acc;
       },
-      { totalIncome: 0, totalExpenses: 0, count: 0 }
+      { totalIncome: 0, totalExpenses: 0, count: 0 },
     );
 
     const result = {

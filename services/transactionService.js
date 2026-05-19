@@ -50,6 +50,67 @@ export class TransactionService {
   }
 
   /**
+   * Get paginated transactions for a user
+   * @param {string} userId - User ID
+   * @param {number} skip - Number of records to skip
+   * @param {number} limit - Number of records to return
+   * @returns {Promise<Object>} Paginated transactions with metadata
+   */
+  async getUserTransactionsPaginated(userId, skip = 0, limit = 20) {
+    try {
+      logger.debug(
+        `Fetching paginated transactions for user: ${userId}, page: ${Math.floor(skip / limit) + 1}`,
+      );
+
+      return await this.prisma.transaction.findMany({
+        where: {
+          account: {
+            userId: userId,
+          },
+        },
+        include: {
+          account: true,
+          mood: true,
+        },
+        orderBy: {
+          date: "desc",
+        },
+        skip,
+        take: limit,
+      });
+    } catch (error) {
+      logger.error(`Failed to fetch paginated transactions: ${error.message}`, {
+        userId,
+        skip,
+        limit,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get total transaction count for a user
+   * @param {string} userId - User ID
+   * @returns {Promise<number>} Total transaction count
+   */
+  async getTransactionCount(userId) {
+    try {
+      return await this.prisma.transaction.count({
+        where: {
+          account: {
+            userId: userId,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error(`Failed to count transactions: ${error.message}`, {
+        userId,
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Create a new transaction with fraud detection and budget validation
    * @param {Object} data - Transaction data
    * @param {string} userId - User ID
@@ -60,7 +121,7 @@ export class TransactionService {
   async createTransaction(data, userId, ipAddress) {
     try {
       logger.info(
-        `Creating transaction for user: ${userId}, Type: ${data.type}, Amount: ${data.amount}`
+        `Creating transaction for user: ${userId}, Type: ${data.type}, Amount: ${data.amount}`,
       );
 
       // Auto-find the user's first account
@@ -96,7 +157,7 @@ export class TransactionService {
       const budgetCheck = await this.checkBudgetLimits(
         data,
         userId,
-        transactionData.amount
+        transactionData.amount,
       );
       if (budgetCheck.error && !budgetCheck.allowExceed) {
         const error = new Error(budgetCheck.error);
@@ -181,7 +242,7 @@ export class TransactionService {
             userId,
             data.category,
             Math.abs(data.amount),
-            data.type
+            data.type,
           );
         } catch (budgetError) {
           logger.error("Failed to update budgets for transaction", {
@@ -292,7 +353,7 @@ export class TransactionService {
             userId,
             category: budget.category,
             overspendAmount,
-          }
+          },
         );
 
         return {
@@ -330,7 +391,7 @@ export class TransactionService {
       return {
         detected: true,
         reason: `Amount ($${absoluteAmount}) significantly higher than average spending ($${averageAmount.toFixed(
-          2
+          2,
         )})`,
         riskScore: 85,
       };
@@ -361,13 +422,13 @@ export class TransactionService {
 
       const total = transactions.reduce(
         (sum, tx) => sum + Math.abs(tx.amount),
-        0
+        0,
       );
       return total / transactions.length;
     } catch (error) {
       logger.error(
         `Failed to calculate average transaction: ${error.message}`,
-        { userId }
+        { userId },
       );
       return 100; // Fallback default
     }
@@ -469,7 +530,7 @@ export class TransactionService {
                 userId,
                 oldCategory,
                 -oldAmount, // Negative to remove
-                "expense"
+                "expense",
               );
             }
 
@@ -478,7 +539,7 @@ export class TransactionService {
               userId,
               newCategory,
               newAmount,
-              "expense"
+              "expense",
             );
 
             logger.debug("Budgets adjusted for updated transaction", {
@@ -531,7 +592,7 @@ export class TransactionService {
           actualUserId,
           transaction.category,
           Math.abs(transaction.amount),
-          transaction.type
+          transaction.type,
         );
       }
     } catch (error) {
@@ -573,7 +634,7 @@ export class TransactionService {
             userId,
             transaction.category,
             -Math.abs(transaction.amount), // Negative to remove
-            "expense"
+            "expense",
           );
 
           logger.debug("Budgets adjusted for deleted transaction", {
@@ -649,7 +710,7 @@ export class TransactionService {
   async markAsReviewed(transactionId, userId) {
     try {
       logger.info(
-        `Marking transaction as reviewed: ${transactionId} for user: ${userId}`
+        `Marking transaction as reviewed: ${transactionId} for user: ${userId}`,
       );
 
       const transaction = await this.prisma.transaction.update({
@@ -687,7 +748,7 @@ export class TransactionService {
   async getTransactionSummary(userId, timeframe = "monthly") {
     try {
       logger.debug(
-        `Generating transaction summary for user: ${userId}, timeframe: ${timeframe}`
+        `Generating transaction summary for user: ${userId}, timeframe: ${timeframe}`,
       );
 
       const dateFilter = this.getDateFilter(timeframe);
@@ -740,7 +801,7 @@ export class TransactionService {
       summary.netFlow = summary.totalIncome - summary.totalExpenses;
 
       logger.debug(
-        `Transaction summary generated: ${summary.transactionCount} transactions`
+        `Transaction summary generated: ${summary.transactionCount} transactions`,
       );
       return summary;
     } catch (error) {

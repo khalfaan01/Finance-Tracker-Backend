@@ -154,7 +154,7 @@ export class AuthService {
   async checkAccountLock(user) {
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       const minutesLeft = Math.ceil(
-        (user.lockedUntil - new Date()) / (1000 * 60)
+        (user.lockedUntil - new Date()) / (1000 * 60),
       );
       logger.warn("Account lock check failed", {
         userId: user.id,
@@ -162,7 +162,7 @@ export class AuthService {
         minutesLeft,
       });
       throw new Error(
-        `Account temporarily locked. Try again in ${minutesLeft} minutes.`
+        `Account temporarily locked. Try again in ${minutesLeft} minutes.`,
       );
     }
   }
@@ -219,6 +219,15 @@ export class AuthService {
     try {
       const normalizedEmail = email.toLowerCase().trim();
 
+      // USER REGISTRATION CAP - Configurable via environment variable
+      const MAX_USERS = parseInt(process.env.MAX_REGISTERED_USERS) || 50;
+      const userCount = await this.prisma.user.count();
+      if (userCount >= MAX_USERS) {
+        throw new Error(
+          `Registration closed: Beta limit of ${MAX_USERS} users reached`,
+        );
+      }
+
       // Check if user exists
       const existingUser = await this.prisma.user.findUnique({
         where: { email: normalizedEmail },
@@ -266,7 +275,7 @@ export class AuthService {
         "registration_success",
         "127.0.0.1", // Registration typically from trusted source
         "New user registered",
-        0
+        0,
       );
 
       logger.info("User registered successfully", {
@@ -305,7 +314,7 @@ export class AuthService {
       // Case-insensitive search (Prisma doesn't support case-insensitive email search natively)
       const allUsers = await this.prisma.user.findMany();
       const user = allUsers.find(
-        (u) => u.email.toLowerCase() === normalizedEmail
+        (u) => u.email.toLowerCase() === normalizedEmail,
       );
 
       if (!user) {
@@ -348,7 +357,7 @@ export class AuthService {
           "login_failed",
           clientIp,
           `Failed login attempt ${loginAttempts}/5`,
-          20
+          20,
         );
 
         logger.warn("Login failed - invalid password", {
@@ -388,7 +397,7 @@ export class AuthService {
         "login_success",
         clientIp,
         `Successful login from ${geoData.city}, ${geoData.country_name}`,
-        0
+        0,
       );
 
       // Generate JWT tokens with different expirations
@@ -397,7 +406,7 @@ export class AuthService {
         process.env.JWT_SECRET,
         {
           expiresIn: "7d", // changed from '15m' to '7d' for development
-        }
+        },
       );
 
       // Refresh token uses user-specific secret for added security
@@ -406,7 +415,7 @@ export class AuthService {
         process.env.JWT_SECRET + user.password,
         {
           expiresIn: "7d",
-        }
+        },
       );
 
       logger.info("User login successful", {
@@ -472,7 +481,7 @@ export class AuthService {
         process.env.JWT_SECRET,
         {
           expiresIn: "15m",
-        }
+        },
       );
 
       logger.info("Access token refreshed", { userId: user.id });
@@ -565,7 +574,7 @@ export class AuthService {
         "profile_updated",
         "127.0.0.1", // Could get actual IP if available
         `Updated fields: ${Object.keys(filteredUpdates).join(", ")}`,
-        5
+        5,
       );
 
       logger.info("User profile updated", {
@@ -627,7 +636,7 @@ export class AuthService {
         "password_changed",
         "127.0.0.1", // Could get actual IP if available
         "User changed password",
-        10
+        10,
       );
 
       logger.info("Password changed successfully", { userId });
@@ -652,7 +661,7 @@ export class AuthService {
         "logout",
         clientIp,
         "User logged out",
-        0
+        0,
       );
 
       logger.info("User logged out", { userId, clientIp });
@@ -726,7 +735,7 @@ export class AuthService {
         // Security: Don't reveal if user exists
         logger.info(
           "Password reset requested for non-existent email (security)",
-          { email: normalizedEmail }
+          { email: normalizedEmail },
         );
         return {
           success: true,
@@ -738,7 +747,7 @@ export class AuthService {
       const resetToken = jwt.sign(
         { userId: user.id, purpose: "password_reset" },
         process.env.JWT_SECRET + user.password,
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       // In production: Send email with reset link
@@ -753,7 +762,7 @@ export class AuthService {
         "password_reset_requested",
         "127.0.0.1",
         "Password reset requested",
-        20
+        20,
       );
 
       logger.info("Password reset token generated", {
@@ -828,7 +837,7 @@ export class AuthService {
         "password_reset_completed",
         "127.0.0.1",
         "Password reset completed",
-        30
+        30,
       );
 
       logger.info("Password reset successfully", { userId: user.id });

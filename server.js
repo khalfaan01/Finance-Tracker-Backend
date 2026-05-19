@@ -7,7 +7,8 @@ import mongoSanitize from "express-mongo-sanitize";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import hpp from "hpp";
-import { createServer } from "http";
+import http, { createServer } from "http";
+import https from "https";
 import { Server } from "socket.io";
 import prisma from "./db.js";
 import logger from "./logger.js";
@@ -33,7 +34,7 @@ const server = createServer(app);
  */
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
+  max: 100,
   message: {
     error: "Too many requests from this IP, please try again later.",
   },
@@ -56,7 +57,7 @@ const moodLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 3,
   message: { error: "Too many login attempts, please try again later." },
 });
 
@@ -94,7 +95,7 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  })
+  }),
 );
 
 /**
@@ -143,7 +144,7 @@ app.use(
     },
     crossOriginEmbedderPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" },
-  })
+  }),
 );
 
 app.use(hpp());
@@ -269,15 +270,55 @@ const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, async () => {
   try {
-    // Test database connection
     const prismaClient = await prisma.getClient();
 
-    // Single startup log with essential info
     logger.info("Server started successfully", {
       port: PORT,
       environment: process.env.NODE_ENV || "development",
       nodeVersion: process.version,
     });
+
+    // Start pinger AFTER server is confirmed running
+    if (process.env.NODE_ENV === "production") {
+      const PING_INTERVAL = 14 * 60 * 1000;
+      // Default to HTTP for localhost, use HTTPS if URL specifies it
+      const PING_URL =
+        process.env.SELF_PING_URL || `http://localhost:${PORT}/health`;
+
+      // Choose protocol based on URL
+      const httpModule = PING_URL.startsWith("https://") ? https : http;
+
+      // Wait 30 seconds before first ping to ensure everything is stable
+      setTimeout(() => {
+        const sendPing = () => {
+          httpModule
+            .get(PING_URL, (res) => {
+              logger.debug("Keep-alive ping sent", {
+                statusCode: res.statusCode,
+              });
+              // Consume response data to free up memory
+              res.resume();
+            })
+            .on("error", (err) => {
+              logger.warn("Keep-alive ping failed", {
+                error: err.message,
+              });
+            });
+        };
+
+        // Send initial ping immediately
+        sendPing();
+
+        // Set up interval for subsequent pings
+        setInterval(sendPing, PING_INTERVAL);
+
+        logger.info("Production keep-alive pinger activated", {
+          interval: "14 minutes",
+          url: PING_URL,
+          protocol: PING_URL.startsWith("https://") ? "HTTPS" : "HTTP",
+        });
+      }, 30000); // 30 second initial delay
+    }
   } catch (err) {
     logger.error("Server startup failed - Database connection error", {
       error: err.message,
