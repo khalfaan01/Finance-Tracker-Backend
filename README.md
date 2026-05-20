@@ -551,7 +551,7 @@ Final Risk Score (0-100)
 
 ## Database Entity Relationship Diagram
 
-```mermaid
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         DATABASE SCHEMA RELATIONSHIPS                       │
 └─────────────────────────────────────────────────────────────────────────────┘
