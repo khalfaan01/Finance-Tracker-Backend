@@ -181,206 +181,228 @@ Finance-Tracker-Backend/
 
 ### High-Level System Architecture
 
-```mermaid
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ CLIENT TIER (Port 5173) │
-│ ┌───────────────────────────────────────────────────────────────────────┐ │
-│ │ FINANCE-TRACKER-FRONTEND (React 18 + Vite) │ │
-│ │ ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐ │ │
-│ │ │ Pages │ │Dashboard │ │ Debt │ │ UI │ │ Services │ │ │
-│ │ │ Login │ │ Analytics │ │Tracker │ │Components│ │ API Layer │ │ │
-│ │ │Register │ │ Budgets │ │Manager │ │Magnetic │ │ Axios │ │ │
-│ │ │Landing │ │ Goals │ │Payments │ │Cursor │ │ Socket.IO │ │ │
-│ │ │HomePage │ │ Security │ │ │ │MultiFilter│ │ Client │ │ │
-│ │ └─────────┘ └──────────┘ └──────────┘ └──────────┘ └────────────┘ │ │
-│ │ │ │
-│ │ ┌─────────────────── CONTEXT PROVIDER HIERARCHY ─────────────────┐ │ │
-│ │ │ AuthProvider → SocketProvider → TransactionsProvider │ │ │
-│ │ │ → AccountsProvider → BudgetsProvider → GoalsProvider │ │ │
-│ │ │ → DebtProvider → TransactionMoodProvider → DashboardProvider│ │ │
-│ │ └────────────────────────────────────────────────────────────────┘ │ │
-│ └───────────────────────────────────────────────────────────────────────┘ │
+│ CLIENT TIER (Port 5173)                                                    │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ FINANCE-TRACKER-FRONTEND (React 18 + Vite)                             │ │
+│ │                                                                         │ │
+│ │ ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐      │ │
+│ │ │ Pages   │ │Dashboard │ │ Debt     │ │ UI       │ │ Services   │      │ │
+│ │ │ Login   │ │ Analytics│ │Tracker   │ │Components│ │ API Layer  │      │ │
+│ │ │Register │ │ Budgets  │ │Manager   │ │Magnetic  │ │ Axios      │      │ │
+│ │ │Landing  │ │ Goals    │ │Payments  │ │Cursor    │ │ Socket.IO  │      │ │
+│ │ │HomePage │ │ Security │ │          │ │MultiFilter│ │ Client    │      │ │
+│ │ └─────────┘ └──────────┘ └──────────┘ └──────────┘ └────────────┘      │ │
+│ │                                                                         │ │
+│ │ ┌──────────────── CONTEXT PROVIDER HIERARCHY ────────────────┐          │ │
+│ │ │ AuthProvider → SocketProvider → TransactionsProvider       │          │ │
+│ │ │ → AccountsProvider → BudgetsProvider → GoalsProvider       │          │ │
+│ │ │ → DebtProvider → TransactionMoodProvider                   │          │ │
+│ │ │ → DashboardProvider                                        │          │ │
+│ │ └─────────────────────────────────────────────────────────────┘          │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────┘
-│
-HTTPS / WSS (CORS Configured)
-│
+                                      │
+                                      │ HTTPS / WSS (CORS Configured)
+                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ APPLICATION TIER (Port 5000) │
-│ ┌───────────────────────────────────────────────────────────────────────┐ │
-│ │ FINANCE-TRACKER-BACKEND (Node.js + Express) │ │
-│ │ │ │
-│ │ ┌─────────────────── SECURITY MIDDLEWARE CHAIN ──────────────────┐ │ │
-│ │ │ Helmet → CORS → Rate Limiter → HPP → MongoSanitize → JSON │ │ │
-│ │ └────────────────────────────────────────────────────────────────┘ │ │
-│ │ │ │
-│ │ ┌─────────────────── RATE LIMITING LAYERS ───────────────────────┐ │ │
-│ │ │ General: 100 req/15min │ Mood: 500/15min │ Auth: 3/15min │ │ │
-│ │ │ Budget Check: 60/min │ Health: Unlimited │ │ │
-│ │ └────────────────────────────────────────────────────────────────┘ │ │
-│ │ │ │
-│ │ ┌──────────────── API ROUTE LAYER (9 Route Modules) ─────────────┐ │ │
-│ │ │ /api/auth │ /api/transactions │ /api/budgets │ /api/goals │ │ │
-│ │ │ /api/accounts │ /api/analytics │ /api/security │ │ │
-│ │ │ /api/debts │ /api/recurring-transactions │ /api/transaction-mood│ │ │
-│ │ └────────────────────────────────────────────────────────────────┘ │ │
-│ │ │ │ │
-│ │ ┌─────────────────── SERVICE LAYER (11 Services) ────────────────┐ │ │
-│ │ │ TransactionService │ BudgetService │ SecurityService │ │ │
-│ │ │ AnalyticsService │ GoalService │ AuthService │ │ │
-│ │ │ AccountService │ DebtService │ RecurringService │ │ │
-│ │ │ EnhancedAnalyticsService │ TransactionMoodService │ │ │
-│ │ └────────────────────────────────────────────────────────────────┘ │ │
-│ │ │ │ │
-│ │ ┌─────────────────── REAL-TIME LAYER ───────────────────────────┐ │ │
-│ │ │ Socket.IO Server │ │ │
-│ │ │ ├── join_user_room (userId) │ │ │
-│ │ │ ├── monitor_transaction → admin_security room │ │ │
-│ │ │ └── User-specific event broadcasting │ │ │
-│ │ └────────────────────────────────────────────────────────────────┘ │ │
-│ └───────────────────────────────────────────────────────────────────────┘ │
+│ APPLICATION TIER (Port 5000)                                               │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ FINANCE-TRACKER-BACKEND (Node.js + Express)                            │ │
+│ │                                                                         │ │
+│ │ ┌──────────── SECURITY MIDDLEWARE CHAIN ─────────────┐                 │ │
+│ │ │ Helmet → CORS → Rate Limiter → HPP                │                 │ │
+│ │ │ → MongoSanitize → JSON                             │                 │ │
+│ │ └────────────────────────────────────────────────────┘                 │ │
+│ │                                                                         │ │
+│ │ ┌──────────── RATE LIMITING LAYERS ────────────────┐                  │ │
+│ │ │ General: 100 req/15min                           │                  │ │
+│ │ │ Mood: 500/15min                                  │                  │ │
+│ │ │ Auth: 3/15min                                    │                  │ │
+│ │ │ Budget Check: 60/min                             │                  │ │
+│ │ │ Health: Unlimited                                │                  │ │
+│ │ └───────────────────────────────────────────────────┘                  │ │
+│ │                                                                         │ │
+│ │ ┌────────── API ROUTE LAYER (9 Route Modules) ──────────┐             │ │
+│ │ │ /api/auth                                             │             │ │
+│ │ │ /api/transactions                                     │             │ │
+│ │ │ /api/budgets                                          │             │ │
+│ │ │ /api/goals                                            │             │ │
+│ │ │ /api/accounts                                         │             │ │
+│ │ │ /api/analytics                                        │             │ │
+│ │ │ /api/security                                         │             │ │
+│ │ │ /api/debts                                            │             │ │
+│ │ │ /api/recurring-transactions                           │             │ │
+│ │ │ /api/transaction-mood                                 │             │ │
+│ │ └────────────────────────────────────────────────────────┘             │ │
+│ │                                                                         │ │
+│ │ ┌──────────── SERVICE LAYER (11 Services) ────────────┐                │ │
+│ │ │ TransactionService                                  │                │ │
+│ │ │ BudgetService                                       │                │ │
+│ │ │ SecurityService                                     │                │ │
+│ │ │ AnalyticsService                                    │                │ │
+│ │ │ GoalService                                         │                │ │
+│ │ │ AuthService                                         │                │ │
+│ │ │ AccountService                                      │                │ │
+│ │ │ DebtService                                         │                │ │
+│ │ │ RecurringService                                    │                │ │
+│ │ │ EnhancedAnalyticsService                            │                │ │
+│ │ │ TransactionMoodService                              │                │ │
+│ │ └──────────────────────────────────────────────────────┘                │ │
+│ │                                                                         │ │
+│ │ ┌──────────────── REAL-TIME LAYER ────────────────┐                    │ │
+│ │ │ Socket.IO Server                                │                    │ │
+│ │ │ ├── join_user_room (userId)                     │                    │ │
+│ │ │ ├── monitor_transaction → admin_security room   │                    │ │
+│ │ │ └── User-specific event broadcasting            │                    │ │
+│ │ └──────────────────────────────────────────────────┘                    │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────┘
-│
-Prisma ORM (Connection Pool)
-│
+                                      │
+                                      │ Prisma ORM (Connection Pool)
+                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ DATABASE TIER (PostgreSQL) │
-│ ┌───────────────────────────────────────────────────────────────────────┐ │
-│ │ PRISMA SCHEMA MODELS │ │
-│ │ │ │
-│ │ ┌──────────┐ ┌──────────────┐ ┌──────────────┐ ┌─────────────┐ │ │
-│ │ │ User │ │ Transaction │ │ Budget │ │ Account │ │ │
-│ │ │ 1 ───────┼──│ N ──────────┼──│ N ───────────┼──│ N ──────────│ │ │
-│ │ │ │ │ │ │ │ │ │ │ │
-│ │ │ 1 ───────┼──│────── 1 ────│ │ │ │ │ │ │
-│ │ │ │ │ TransactionMood │ │ │ │ │
-│ │ │ │ │ │ │ │ │ │
-│ │ │ 1 ───────┼──│ N ──────────┼── N ───────────┼──│ N ──────────│ │ │
-│ │ │ │ │ SecurityLog │ SecurityEvent │ │FinancialGoal│ │ │
-│ │ │ │ │ │ │ │ │ │ │
-│ │ │ 1 ───────┼──│ N ──────────┼── N ───────────┼──│ N ──────────│ │ │
-│ │ │ │ │RecurringTxn │ Debt │ │ │ │ │
-│ │ └──────────┘ └──────────────┘ └──────────────┘ └─────────────┘ │ │
-│ └───────────────────────────────────────────────────────────────────────┘ │
+│ DATABASE TIER (PostgreSQL)                                                 │
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ PRISMA SCHEMA MODELS                                                   │ │
+│ │                                                                         │ │
+│ │ ┌──────────┐ ┌──────────────┐ ┌──────────────┐ ┌─────────────┐         │ │
+│ │ │ User     │ │ Transaction  │ │ Budget       │ │ Account     │         │ │
+│ │ │ 1 ───────┼─│ N ───────────┼─│ N ───────────┼─│ N ──────────│         │ │
+│ │ │          │ │              │ │              │ │             │         │ │
+│ │ │ 1 ───────┼─│────── 1 ─────│ │              │ │             │         │ │
+│ │ │          │ │TransactionMood│ │             │ │             │         │ │
+│ │ │          │ │              │ │              │ │             │         │ │
+│ │ │ 1 ───────┼─│ N ───────────┼─│ N ───────────┼─│ N ──────────│         │ │
+│ │ │          │ │ SecurityLog  │ │SecurityEvent │ │FinancialGoal│         │ │
+│ │ │          │ │              │ │              │ │             │         │ │
+│ │ │ 1 ───────┼─│ N ───────────┼─│ N ───────────┼─│ N ──────────│         │ │
+│ │ │          │ │RecurringTxn  │ │ Debt         │ │             │         │ │
+│ │ └──────────┘ └──────────────┘ └──────────────┘ └─────────────┘         │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Data Flow Architecture
 
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ DATA FLOW DIAGRAM │
+│                           DATA FLOW DIAGRAM                                │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 REQUEST FLOW (Create Transaction Example):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[React Component] [Express Server] [PostgreSQL]
-│ │ │
-│ 1. User submits form │ │
-│ POST /api/transactions │ │
-│ {amount, type, category, date} │ │
-│────────────────────────────────────>│ │
-│ │ │
-│ ┌─────────────────┴─────────────────┐ │
-│ │ SECURITY MIDDLEWARE CHAIN │ │
-│ │ ├─ Helmet (CSP, XSS Protection) │ │
-│ │ ├─ CORS (Origin Validation) │ │
-│ │ ├─ Rate Limiter (Request Check) │ │
-│ │ ├─ HPP (Param Pollution Protection)│ │
-│ │ ├─ MongoSanitize (Injection Prev) │ │
-│ │ └─ JSON Parser (10kb limit) │ │
-│ └─────────────────┬─────────────────┘ │
-│ │ │
-│ ┌─────────────────┴─────────────────┐ │
-│ │ authenticateToken MIDDLEWARE │ │
-│ │ ├─ Check Authorization Header │ │
-│ │ ├─ Extract Bearer Token │ │
-│ │ ├─ Check Token Blacklist │ │
-│ │ ├─ JWT.verify(token, secret) │ │
-│ │ └─ Attach user to req.user │ │
-│ └─────────────────┬─────────────────┘ │
-│ │ │
-│ ┌─────────────────┴─────────────────┐ │
-│ │ EXPRESS-VALIDATOR (Input Check) │ │
-│ │ ├─ amount: positive float │ │
-│ │ ├─ type: income|expense │ │
-│ │ ├─ category: 1-50 chars, sanitized │ │
-│ │ ├─ date: ISO8601, no future dates │ │
-│ │ └─ description: optional, escaped │ │
-│ └─────────────────┬─────────────────┘ │
-│ │ │
-│ ┌─────────────────┴─────────────────┐ │
-│ │ TransactionService.createTransaction│ │
-│ │ │ │
-│ │ 1. Find user account │ │
-│ │ prisma.account.findFirst() ──────┼──────────>│
-│ │ <────────────────────────────────┼───────────│
-│ │ │ │
-│ │ 2. Check budget limits │ │
-│ │ a. Find active budget ───────────┼──────────>│
-│ │ b. Calculate current spending ───┼──────────>│
-│ │ c. Compare with limit │ │
-│ │ │ │
-│ │ 3. Fraud detection │ │
-│ │ a. Calculate avg transaction ────┼──────────>│
-│ │ b. Compare amount ratio │ │
-│ │ c. Flag if 5x above average │ │
-│ │ │ │
-│ │ 4. Create transaction ──────────────┼──────────>│
-│ │ <────────────────────────────────┼───────────│
-│ │ │ │
-│ │ 5. Update budget spent ─────────────┼──────────>│
-│ │ │ │
-│ │ 6. Log security event (if flagged) ─┼──────────>│
-│ │ │ │
-│ │ 7. Emit Socket.IO event │ │
-│ └─────────────────┬─────────────────┘ │
-│ │ │
-│ <─── 201 Response ───────────────│ │
-│ {transaction, warning?, fraudReason?} │
-│ │ │
+[React Component]          [Express Server]              [PostgreSQL]
+       │                            │                           │
+       │ 1. User submits form       │                           │
+       │ POST /api/transactions     │                           │
+       │ {amount, type, category, date}                         │
+       ├───────────────────────────>│                           │
+       │                            │                           │
+       │        ┌───────────────────┴───────────────────┐       │
+       │        │ SECURITY MIDDLEWARE CHAIN             │       │
+       │        │ ├─ Helmet (CSP, XSS Protection)       │       │
+       │        │ ├─ CORS (Origin Validation)           │       │
+       │        │ ├─ Rate Limiter (Request Check)       │       │
+       │        │ ├─ HPP (Param Pollution Protection)   │       │
+       │        │ ├─ MongoSanitize (Injection Prev)     │       │
+       │        │ └─ JSON Parser (10kb limit)           │       │
+       │        └───────────────────┬───────────────────┘       │
+       │                            │                           │
+       │        ┌───────────────────┴───────────────────┐       │
+       │        │ authenticateToken MIDDLEWARE          │       │
+       │        │ ├─ Check Authorization Header         │       │
+       │        │ ├─ Extract Bearer Token               │       │
+       │        │ ├─ Check Token Blacklist              │       │
+       │        │ ├─ JWT.verify(token, secret)          │       │
+       │        │ └─ Attach user to req.user            │       │
+       │        └───────────────────┬───────────────────┘       │
+       │                            │                           │
+       │        ┌───────────────────┴───────────────────┐       │
+       │        │ EXPRESS-VALIDATOR (Input Check)       │       │
+       │        │ ├─ amount: positive float             │       │
+       │        │ ├─ type: income|expense               │       │
+       │        │ ├─ category: 1-50 chars, sanitized    │       │
+       │        │ ├─ date: ISO8601, no future dates     │       │
+       │        │ └─ description: optional, escaped     │       │
+       │        └───────────────────┬───────────────────┘       │
+       │                            │                           │
+       │        ┌───────────────────┴───────────────────┐       │
+       │        │ TransactionService.createTransaction  │       │
+       │        │                                       │       │
+       │        │ 1. Find user account                  │       │
+       │        │ prisma.account.findFirst() ──────────┼──────>│
+       │        │ <────────────────────────────────────┼───────│
+       │        │                                       │       │
+       │        │ 2. Check budget limits               │       │
+       │        │ a. Find active budget ──────────────┼──────>│
+       │        │ b. Calculate current spending ──────┼──────>│
+       │        │ c. Compare with limit               │       │
+       │        │                                       │       │
+       │        │ 3. Fraud detection                  │       │
+       │        │ a. Calculate avg transaction ──────┼──────>│
+       │        │ b. Compare amount ratio             │       │
+       │        │ c. Flag if 5x above average         │       │
+       │        │                                       │       │
+       │        │ 4. Create transaction ──────────────┼──────>│
+       │        │ <────────────────────────────────────┼───────│
+       │        │                                       │       │
+       │        │ 5. Update budget spent ─────────────┼──────>│
+       │        │                                       │       │
+       │        │ 6. Log security event (if flagged) ─┼──────>│
+       │        │                                       │       │
+       │        │ 7. Emit Socket.IO event              │       │
+       │        └───────────────────┬───────────────────┘       │
+       │                            │                           │
+       │ <──── 201 Response ────────│                           │
+       │ {transaction, warning?, fraudReason?}                  │
+       │                            │                           │
 
 REAL-TIME FLOW (Socket.IO):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[Frontend Socket.IO Client] [Backend Socket.IO Server] [Admin Client]
-│ │ │
-│ 1. On login, emit: │ │
-│ 'join*user_room', userId │ │
-│────────────────────────────────────>│ │
-│ │ socket.join(`user*${userId}`) │
-│ │ │
-│ 2. When transaction created: │ │
-│ Server broadcasts to user room │ │
-│ <────── 'transaction_created' ───│ │
-│ │ │
-│ 3. When fraud detected: │ │
-│ Server emits to admin room │ │
-│ │ 'monitor_transaction' ─────────>│
-│ │ to 'admin_security' room │
+[Frontend Socket.IO Client]   [Backend Socket.IO Server]   [Admin Client]
+              │                              │                       │
+              │ 1. On login, emit:          │                       │
+              │ 'join_user_room', userId    │                       │
+              ├────────────────────────────>│                       │
+              │                             │ socket.join()         │
+              │                             │                       │
+              │ 2. When transaction created:│                       │
+              │ Server broadcasts to user room                      │
+              │ <──── 'transaction_created' ─────────────────────── │
+              │                             │                       │
+              │ 3. When fraud detected:     │                       │
+              │                             │ 'monitor_transaction' ├────>
+              │                             │ to 'admin_security'   │
 
 TOKEN REFRESH FLOW:
 ━━━━━━━━━━━━━━━━━━━
 
-[Frontend Axios Interceptor] [Backend /api/auth/refresh]
-│ │
-│ 1. API call returns 403 │
-│ "Token expired" │
-│ │
-│ 2. Check if refreshing already │
-│ ├─ Yes: Queue request │
-│ └─ No: Set isRefreshing=true │
-│ │
-│ 3. POST /api/auth/refresh ─────────>│
-│ {refreshToken} │
-│ <── {accessToken} ──────────────│
-│ │
-│ 4. Update localStorage │
-│ Update axios defaults │
-│ │
-│ 5. Process queued requests │
-│ with new token │
-│ │
-│ 6. Retry original request │
+[Frontend Axios Interceptor]      [Backend /api/auth/refresh]
+                │                               │
+                │ 1. API call returns 403      │
+                │ "Token expired"               │
+                │                               │
+                │ 2. Check if refreshing already│
+                │ ├─ Yes: Queue request         │
+                │ └─ No: Set isRefreshing=true  │
+                │                               │
+                ├──────────────────────────────>│
+                │ 3. POST /api/auth/refresh    │
+                │ {refreshToken}                │
+                │ <──── {accessToken} ───────── │
+                │                               │
+                │ 4. Update localStorage        │
+                │ Update axios defaults         │
+                │                               │
+                │ 5. Process queued requests    │
+                │ with new token                │
+                │                               │
+                │ 6. Retry original request     │
+```
 
 ---
 
@@ -423,91 +445,102 @@ TOKEN REFRESH FLOW:
 
 ### Security Architecture Layers
 
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ SECURITY DEFENSE IN DEPTH │
+│                        SECURITY DEFENSE IN DEPTH                           │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 LAYER 1: NETWORK SECURITY
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ Helmet.js │
-│ ├── Content-Security-Policy (CSP): default-src 'self' │
-│ ├── X-Frame-Options: DENY │
-│ ├── X-Content-Type-Options: nosniff │
-│ ├── Strict-Transport-Security: max-age=31536000 │
-│ └── X-XSS-Protection: 1; mode=block │
-│ │
-│ CORS (Origin Validation) │
-│ ├── Allowed Origins: [localhost:5173, 127.0.0.1:5173, FRONTEND_URL] │
-│ ├── Credentials: true │
-│ └── Methods: GET, POST, PUT, DELETE, OPTIONS │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Helmet.js                                                                  │
+│ ├── Content-Security-Policy (CSP): default-src 'self'                     │
+│ ├── X-Frame-Options: DENY                                                  │
+│ ├── X-Content-Type-Options: nosniff                                        │
+│ ├── Strict-Transport-Security: max-age=31536000                            │
+│ └── X-XSS-Protection: 1; mode=block                                        │
+│                                                                             │
+│ CORS (Origin Validation)                                                    │
+│ ├── Allowed Origins: [localhost:5173, 127.0.0.1:5173, FRONTEND_URL]       │
+│ ├── Credentials: true                                                      │
+│ └── Methods: GET, POST, PUT, DELETE, OPTIONS                               │
+└─────────────────────────────────────────────────────────────────────────────┘
 
 LAYER 2: APPLICATION SECURITY
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ Rate Limiting │
-│ ├── General API: 100 requests/15 minutes │
-│ ├── Auth Endpoints: 3 requests/15 minutes (brute force protection) │
-│ ├── Budget Checks: 60 requests/minute │
-│ └── Mood Tracking: 500 requests/15 minutes │
-│ │
-│ Input Protection │
-│ ├── hpp(): HTTP Parameter Pollution protection │
-│ ├── mongoSanitize(): NoSQL injection prevention │
-│ ├── express-validator: Schema validation + sanitization │
-│ └── JSON body limit: 10kb │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Rate Limiting                                                              │
+│ ├── General API: 100 requests/15 minutes                                   │
+│ ├── Auth Endpoints: 3 requests/15 minutes                                  │
+│ │   (brute force protection)                                               │
+│ ├── Budget Checks: 60 requests/minute                                      │
+│ └── Mood Tracking: 500 requests/15 minutes                                 │
+│                                                                             │
+│ Input Protection                                                            │
+│ ├── hpp(): HTTP Parameter Pollution protection                              │
+│ ├── mongoSanitize(): NoSQL injection prevention                             │
+│ ├── express-validator: Schema validation + sanitization                     │
+│ └── JSON body limit: 10kb                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
 
 LAYER 3: AUTHENTICATION & AUTHORIZATION
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ JWT Token System │
-│ ├── Access Token: Short-lived (JWT signed) │
-│ ├── Refresh Token: Long-lived (stored client-side) │
-│ ├── Token Blacklist: In-memory (Redis-ready for production) │
-│ ├── Automatic 24-hour blacklist cleanup │
-│ └── Role-based: authenticateToken → requireAdmin │
-│ │
-│ Password Security │
-│ ├── bcrypt hashing (12 salt rounds) │
-│ └── Minimum password requirements enforced │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ JWT Token System                                                            │
+│ ├── Access Token: Short-lived (JWT signed)                                  │
+│ ├── Refresh Token: Long-lived (stored client-side)                          │
+│ ├── Token Blacklist: In-memory (Redis-ready for production)                 │
+│ ├── Automatic 24-hour blacklist cleanup                                     │
+│ └── Role-based: authenticateToken → requireAdmin                            │
+│                                                                             │
+│ Password Security                                                           │
+│ ├── bcrypt hashing (12 salt rounds)                                         │
+│ └── Minimum password requirements enforced                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
 
 LAYER 4: DATA SECURITY
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ Database Protection │
-│ ├── Prisma ORM: Parameterized queries (prevents SQL injection) │
-│ ├── Connection pooling with retry logic (max 3 attempts) │
-│ ├── Exponential backoff on connection failure │
-│ └── Transaction support with automatic rollback │
-│ │
-│ Data in Transit │
-│ ├── HTTPS recommended for production │
-│ └── Encrypted JWT tokens │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Database Protection                                                         │
+│ ├── Prisma ORM: Parameterized queries                                       │
+│ │   (prevents SQL injection)                                                │
+│ ├── Connection pooling with retry logic                                     │
+│ │   (max 3 attempts)                                                        │
+│ ├── Exponential backoff on connection failure                               │
+│ └── Transaction support with automatic rollback                             │
+│                                                                             │
+│ Data in Transit                                                             │
+│ ├── HTTPS recommended for production                                        │
+│ └── Encrypted JWT tokens                                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
 
 LAYER 5: MONITORING & DETECTION
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ Real-time Security Monitoring │
-│ ├── Transaction anomaly detection (5x average flagging) │
-│ ├── Fraud pattern recognition (rapid succession, amount deviations) │
-│ ├── Login attempt tracking with IP/city/country │
-│ ├── Suspicious transaction flagging with risk scoring (0-100) │
-│ └── Security event audit logging │
-│ │
-│ Behavioral Analytics │
-│ ├── Typical login hours tracking │
-│ ├── Known IPs whitelist │
-│ ├── User agent fingerprinting │
-│ └── Trusted locations mapping │
-│ │
-│ Logging & Auditing │
-│ ├── Winston structured logging (JSON in production) │
-│ ├── Auth-specific logging (attempts, successes, failures, revocations) │
-│ ├── Security event persistence to SecurityLog table │
-│ └── Automatic suspicious 404 logging for API routes │
-└──────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Real-time Security Monitoring                                               │
+│ ├── Transaction anomaly detection                                           │
+│ │   (5x average flagging)                                                   │
+│ ├── Fraud pattern recognition                                               │
+│ │   (rapid succession, amount deviations)                                   │
+│ ├── Login attempt tracking with IP/city/country                             │
+│ ├── Suspicious transaction flagging                                         │
+│ │   with risk scoring (0-100)                                               │
+│ └── Security event audit logging                                            │
+│                                                                             │
+│ Behavioral Analytics                                                        │
+│ ├── Typical login hours tracking                                            │
+│ ├── Known IPs whitelist                                                     │
+│ ├── User agent fingerprinting                                               │
+│ └── Trusted locations mapping                                               │
+│                                                                             │
+│ Logging & Auditing                                                          │
+│ ├── Winston structured logging                                              │
+│ │   (JSON in production)                                                    │
+│ ├── Auth-specific logging                                                   │
+│ │   (attempts, successes, failures, revocations)                            │
+│ ├── Security event persistence to SecurityLog table                         │
+│ └── Automatic suspicious 404 logging for API routes                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ### Fraud Detection Pipeline
 
+```text
 Transaction Created
 │
 ▼
@@ -532,6 +565,7 @@ Final Risk Score (0-100)
 ├── 31-60: Flag for Review
 ├── 61-80: High Risk Alert
 └── 81-100: Recommend Block
+```
 
 ---
 
@@ -734,12 +768,15 @@ npx prisma studio
 
 ### Logging
 
-Level Usage
-error Application errors, database failures, security breaches
-warn Suspicious activities, budget exceeding, CORS blocks
-info Server startup, user actions, transaction summaries
-http API requests with method, path, status
-debug Development details, query execution
+```text
+Level   Usage
+──────────────────────────────────────────────────────────────────────────────
+error   Application errors, database failures, security breaches
+warn    Suspicious activities, budget exceeding, CORS blocks
+info    Server startup, user actions, transaction summaries
+http    API requests with method, path, status
+debug   Development details, query execution
+```
 
 ### Production Logging
 
@@ -754,13 +791,16 @@ debug Development details, query execution
 
 ### Socket.IO Events
 
-Event Direction Description
-join_user_room Client → Server Subscribe to user-specific updates
-monitor_transaction Client → Server Send transaction for admin monitoring
-transaction_created Server → Client New transaction notification
-security_alert Server → Client Suspicious activity alert
-budget_warning Server → Client Budget threshold exceeded
-goal_progress Server → Client Goal milestone achieved
+```text
+Event                  Direction           Description
+──────────────────────────────────────────────────────────────────────────────
+join_user_room         Client → Server     Subscribe to user-specific updates
+monitor_transaction    Client → Server     Send transaction for admin monitoring
+transaction_created    Server → Client     New transaction notification
+security_alert         Server → Client     Suspicious activity alert
+budget_warning         Server → Client     Budget threshold exceeded
+goal_progress          Server → Client     Goal milestone achieved
+```
 
 ---
 
