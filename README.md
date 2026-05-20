@@ -82,7 +82,7 @@ A secure, feature-rich backend for personal finance management with advanced cyb
 
 ```bash
 git clone <repository-url>
-cd fintech-cyber-backend
+cd Finance-Tracker-Backend
 ```
 
 ### 2. Install Dependencies
@@ -100,7 +100,7 @@ NODE_ENV=development
 PORT=5000
 FRONTEND_URL=http://localhost:5173
 
-DATABASE_URL="postgresql://username:password@localhost:5432/fintech_cyber?sslmode=require"
+DATABASE_URL="postgresql://username:password@localhost:5432/finance_tracker_database?sslmode=require"
 
 JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
 BCRYPT_SALT_ROUNDS=12
@@ -856,4 +856,4 @@ Built by **Khalfaan Khan**
 
 ---
 
-> **Note:** This backend is designed with fintech‑grade security in mind. Always review and harden configuration before deploying to production.
+> **Note:** This backend is designed with finance tech‑grade security in mind. Always review and harden configuration before deploying to production.
