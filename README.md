@@ -181,6 +181,7 @@ Finance-Tracker-Backend/
 
 ### High-Level System Architecture
 
+```mermaid
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ CLIENT TIER (Port 5173) │
 │ ┌───────────────────────────────────────────────────────────────────────┐ │
@@ -261,6 +262,7 @@ Prisma ORM (Connection Pool)
 │ │ └──────────┘ └──────────────┘ └──────────────┘ └─────────────┘ │ │
 │ └───────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ### Data Flow Architecture
 
@@ -549,8 +551,9 @@ Final Risk Score (0-100)
 
 ## Database Entity Relationship Diagram
 
+```mermaid
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ DATABASE SCHEMA RELATIONSHIPS │
+│                         DATABASE SCHEMA RELATIONSHIPS                       │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                               ┌──────────────────┐
@@ -593,46 +596,46 @@ Final Risk Score (0-100)
                    │          └────────────────┘  └─────────────────┘
         ┌──────────┼──────────┐
         │ N        │ N        │ N
-
 ┌───────┴──────┐ ┌─┴──────────┴──┐ ┌──────────────────┐
-│ Transaction │ │RecurringTxn │ │ TransactionMood │
+│ Transaction  │ │RecurringTxn   │ │ TransactionMood  │
 │──────────────│ │───────────────│ │──────────────────│
-│ id (PK) │ │ id (PK) │ │ id (PK) │
-│ accountId(FK)│ │ userId (FK) │ │ transactionId(FK)│
-│ amount │ │ accountId(FK) │ │ userId (FK) │
-│ type │ │ amount │ │ mood │
-│ category │ │ type │ │ notes │
-│ date │ │ category │ │ intensity (1-10) │
-│ description │ │ frequency │ └──────────────────┘
-│ flagged │ │ interval │
-│ fraudReason │ │ startDate │
-│ riskScore │ │ endDate │
-│ reviewed │ │ lastRun │
-│ isRecurring │ │ isActive │
-└──────────────┘ │ autoApprove │
-│ nextRunDate │
-│ totalRuns │
-└───────────────┘
+│ id (PK)      │ │ id (PK)       │ │ id (PK)          │
+│ accountId(FK)│ │ userId (FK)   │ │ transactionId(FK)│
+│ amount       │ │ accountId(FK) │ │ userId (FK)      │
+│ type         │ │ amount        │ │ mood             │
+│ category     │ │ type          │ │ notes            │
+│ date         │ │ category      │ │ intensity (1-10) │
+│ description  │ │ frequency     │ └──────────────────┘
+│ flagged      │ │ interval      │
+│ fraudReason  │ │ startDate     │
+│ riskScore    │ │ endDate       │
+│ reviewed     │ │ lastRun       │
+│ isRecurring  │ │ isActive      │
+└──────────────┘ │ autoApprove   │
+                 │ nextRunDate   │
+                 │ totalRuns     │
+                 └───────────────┘
 
-┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
-│ Budget │ │ FinancialGoal │ │ Debt │
-│──────────────────│ │──────────────────│ │──────────────────│
-│ id (PK) │ │ id (PK) │ │ id (PK) │
-│ userId (FK) │ │ userId (FK) │ │ userId (FK) │
-│ category │ │ name │ │ name │
-│ limit │ │ targetAmount │ │ type │
-│ spent │ │ currentAmount │ │ principal │
-│ period │ │ deadline │ │ balance │
-│ rolloverType │ │ category │ │ interestRate │
-│ rolloverAmount │ │ importance(1-5) │ │ minimumPayment │
-│ isActive │ │ allocationPct │ │ startDate │
-│ allowExceed │ │ isActive │ │ dueDate │
-└──────────────────┘ │ isCompleted │ │ isActive │
-│ completedAt │ │ termMonths │
-└──────────────────┘ │ paymentsMade │
-│ lender │
-│ accountNumber │
-└──────────────────┘
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│     Budget       │  │  FinancialGoal   │  │      Debt        │
+│──────────────────│  │──────────────────│  │──────────────────│
+│ id (PK)          │  │ id (PK)          │  │ id (PK)          │
+│ userId (FK)      │  │ userId (FK)      │  │ userId (FK)      │
+│ category         │  │ name             │  │ name             │
+│ limit            │  │ targetAmount     │  │ type             │
+│ spent            │  │ currentAmount    │  │ principal        │
+│ period           │  │ deadline         │  │ balance          │
+│ rolloverType     │  │ category         │  │ interestRate     │
+│ rolloverAmount   │  │ importance(1-5)  │  │ minimumPayment   │
+│ isActive         │  │ allocationPct    │  │ startDate        │
+│ allowExceed      │  │ isActive         │  │ dueDate          │
+└──────────────────┘  │ isCompleted      │  │ isActive         │
+                      │ completedAt      │  │ termMonths       │
+                      └──────────────────┘  │ paymentsMade     │
+                                            │ lender           │
+                                            │ accountNumber    │
+                                            └──────────────────┘
+```
 
 ---
 
