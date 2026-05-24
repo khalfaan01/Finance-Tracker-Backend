@@ -50,6 +50,52 @@ A secure, feature-rich backend for personal finance management with advanced cyb
 
 ---
 
+## Screenshots
+
+### API Health Check
+
+![API Health Check](./assets/health-check.PNG)
+
+### Database Schema (Prisma Studio)
+
+![Database Schema](./assets/prisma-studio.PNG)
+
+### Security Dashboard
+
+![Security Dashboard](./assets/security-dashboard.gif)
+
+### Real-Time WebSocket Events
+
+![WebSocket Events](./assets/websocket-events.gif)
+
+---
+
+## Engineering Decisions & Challenges
+
+| Decision                      | Rationale                                                  | Challenge                                                               |
+| ----------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Prisma over raw SQL           | Type-safe queries, automatic migrations, relation handling | Connection pool management + retry logic for production resilience      |
+| In-memory token blacklist     | Fast revocation without database hits                      | Redis recommended for production                                        |
+| 5x average fraud threshold    | Simple heuristic that catches obvious anomalies            | needs ML for nuance                                                     |
+| Tiered rate limiting          | Auth endpoints need stricter limits than general API       | Balancing security with UX                                              |
+| Singleton database connection | Prevents connection leaks in serverless-style deployment   |                                                                         |
+| Winston over console.log      | Structured JSON logging for production parsing             |                                                                         |
+| JWT + refresh token pattern   | Stateless auth scales horizontally                         | Token refresh race conditions when multiple request fail simultaneously |
+
+---
+
+### Future Improvements
+
+- Redis token blacklist — Replace in-memory Set for multi-instance deployments
+- Machine learning fraud detection — Replace heuristic 5x rule with trained anomaly models
+- Two-factor authentication — Implement TOTP/email verification
+- Webhook system — Event-driven notifications for third-party integrations
+- GraphQL layer — Alternative to REST for complex dashboard queries
+- Rate limit storage — Move from memory to Redis for persistence across restarts
+- Create a feedback box for users to report bugs directly, feature requests are centralized and easy to collect product ideas/improvements.
+
+---
+
 ## Tech Stack
 
 | Category             | Technology                              | Purpose                                   |
@@ -674,6 +720,8 @@ Final Risk Score (0-100)
 ---
 
 ## API Documentation
+
+> **Note:** API documentation is currently being updated to align with the latest database schema and service layer refinements. Core functionality demonstrated in the project remains operational.
 
 ### Authentication (`/api/auth`)
 
